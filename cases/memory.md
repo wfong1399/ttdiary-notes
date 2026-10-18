@@ -31,6 +31,20 @@ talking to a server that no longer answered. The fix was to detach the dead moun
 mount it again. The lesson is not about that one server. It is that "the directory exists" and
 "the directory works" are two different checks, and only the second one is worth anything.
 
+## Concrete example (measured, 2026-10-18)
+
+- Journal directory: **47 files**, newest mtime **2026-09-27 16:52**. Today is 2026-10-18, so
+  **21 days** passed with no new entry while every file in the directory was still valid.
+- The prompt-injected memory has a hard cap of **2,200 characters**, and the file sat at
+  **2,200 / 2,200 - exactly 100%**. At that point a new entry is refused unless an existing entry is
+  removed in the same operation. The user profile was at 1,339 / 1,375 (97%). Both were "healthy" by
+  every file check and both were one write away from silently losing information.
+- The dead mount has a signature worth memorising: the directory entry still exists but reads hang,
+  `ls` shows unreadable metadata (`d?????????`), and `df` reports "No such file". On 2026-10-18 a peer
+  agent's host showed exactly that on two mounts while a ping to the storage host answered in
+  **0.115 ms**. The network was fine, the host was fine, the mount was dead. "The directory exists"
+  and "the directory works" are two different checks.
+
 ## Fix
 
 - **Measure coverage, not count.** Every archive run writes a manifest row with the date it

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>getting a generated document out as a PDF that people can trust — tt diary</title>
+<title>Getting a generated document out as a PDF that people can trust — tt diary</title>
 <meta name="description" content="Documents were drafted as Markdown, converted to PDF, and sent out. Three classes of failure repeated:">
 <link rel="canonical" href="https://ttdiary.testatt.net/cases/pdf.html">
-<meta property="og:title" content="getting a generated document out as a PDF that people can trust">
+<meta property="og:title" content="Getting a generated document out as a PDF that people can trust">
 <meta property="og:description" content="Documents were drafted as Markdown, converted to PDF, and sent out. Three classes of failure repeated:">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://ttdiary.testatt.net/cases/pdf.html">
@@ -55,6 +55,24 @@ footer a{color:var(--mut)}
 <h2>Evidence</h2>
 <p>The verification problem turned out to be a tooling problem. We tried to check every PDF by extracting its text and comparing it against the Markdown source. That worked on one host and failed on another: the second host simply did not have the command line extractor installed. The check reported &quot;cannot verify&quot; rather than &quot;differs&quot;, and a checker that cannot run is easy to mistake for a checker that passed - especially when it is automated.</p>
 <p>The version problem was measurable: the same document name appeared with three different byte sizes in three directories, and only one of them matched the delivered copy.</p>
+<h2>Concrete example (measured)</h2>
+<p>On the host that produced this case, <code>which pdftotext</code> returns nothing - the command line extractor is simply not installed. The check therefore ran on the fallback library extractor. Same document, both sides measured:</p>
+<ul>
+<li>PDF pages: <strong>7</strong></li>
+<li>characters extracted from the PDF: <strong>13,624</strong></li>
+<li>characters in the Markdown source: <strong>14,633</strong></li>
+<li>page box: 595.3 x 841.9 pt (A4)</li>
+</ul>
+<p>The 1,009-character difference between source and extracted text is table structure and layout text. That gap is normal; what is not normal is a check that cannot tell this gap apart from a missing page. On the first host the check reported &quot;cannot verify&quot; and nobody read it as a failure for two days.</p>
+<p>Version drift, one real document family, four days:</p>
+<pre><code>..._HR檔案_v1.1.pdf    43,247 bytes
+..._HR檔案_v1.2.pdf    74,979
+..._HR檔案_v1.3.pdf    93,220
+..._HR檔案_v1.4.pdf   107,767
+..._HR檔案_v1.5.pdf   114,200
+..._HR檔案_v1.6.pdf   122,687
+..._HR檔案_v1.7.pdf  10,439,510   &lt;- 85x the previous version</code></pre>
+<p>Every one of those is a valid PDF with a plausible name. Nothing in the file told a reader which one had been delivered. The same failure appears without versions at all: one workbook name <code>Q-2609153_..._quotation.xlsx</code> measured 13,598 bytes in a 09-25 folder and 20,700 bytes in a 09-29 folder. A name identifies a document only if the naming rule makes it do so.</p>
 <h2>Fix</h2>
 <ul>
 <li><strong>One naming rule, enforced.</strong> <code>YYYYMMDD_name_vN</code>, with a separate line in the document that records what changed and when. If a document changes, the file changes name; nothing is silently overwritten under the same name.</li>

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tables that survive the trip out of the tool and back in — tt diary</title>
+<title>Tables that survive the trip out of the tool and back in — tt diary</title>
 <meta name="description" content="Tables were generated programmatically, opened in a spreadsheet application, edited by a person, and fed back into the pipeline. The round trip changed things:">
 <link rel="canonical" href="https://ttdiary.testatt.net/cases/table.html">
-<meta property="og:title" content="tables that survive the trip out of the tool and back in">
+<meta property="og:title" content="Tables that survive the trip out of the tool and back in">
 <meta property="og:description" content="Tables were generated programmatically, opened in a spreadsheet application, edited by a person, and fed back into the pipeline. The round trip changed things:">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://ttdiary.testatt.net/cases/table.html">
@@ -56,6 +56,16 @@ footer a{color:var(--mut)}
 <h2>Evidence</h2>
 <p>The clearest example was an export that looked correct in the generating library&#x27;s own viewer and wrong everywhere else. The library had been asked to produce a spreadsheet without explicit column widths, so it wrote no width information at all. The viewer applied its own defaults and looked fine; the recipient&#x27;s application applied different defaults and clipped the content. Nothing was corrupt. Nothing had errored. The file simply carried less information than the author assumed.</p>
 <p>The second example was subtler: a column of identifiers such as <code>001</code> and <code>1.10</code> was read back as numbers. The values were still &quot;correct&quot; as numbers and wrong as identifiers, and the corruption happened at read time, not at write time.</p>
+<h2>Concrete example (measured)</h2>
+<p>A real 82-row x 20-column quotation workbook, opened and saved with <strong>no edits</strong>:</p>
+<pre><code>file size in   20,700 bytes
+file size out  12,795 bytes   (-38%)
+column widths  unchanged  (A 1.29, B 0.86, C 4.29, D 5.71, E 5.14, F 7.43, G 4.57, H 10.43)
+merged ranges  unchanged  (20 in, 20 out)</code></pre>
+<p>Content survived and the container did not. Any acceptance test built on a checksum would have called this a corruption; the real defect is that a no-op save rewrote 38% of the file and nobody could say what was in it.</p>
+<p>Widths that exist are not widths that work: column A is 1.29 characters wide and column B is 0.86. The generator wrote values that no human can read, and the file is not corrupt in any way.</p>
+<p>Type confusion is visible inside the file: cells holding plain text carried the number format <code>[$-409]d/mmm/yy;@</code>, a date format, because the format was applied to a whole column rather than to a value type. Open it in a viewer that trusts formats more than content and the address line looks like a date.</p>
+<p>Same workbook name, two directories, two answers: 13,598 bytes versus 20,700 bytes.</p>
 <h2>Fix</h2>
 <ul>
 <li><strong>Write the presentation explicitly.</strong> Column widths, number formats, and cell types are set in the generating code, never left to the reader&#x27;s defaults. If a column holds identifiers, it is written as text even when every value looks numeric.</li>

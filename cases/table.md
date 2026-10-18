@@ -25,6 +25,31 @@ The second example was subtler: a column of identifiers such as `001` and `1.10`
 as numbers. The values were still "correct" as numbers and wrong as identifiers, and the
 corruption happened at read time, not at write time.
 
+## Concrete example (measured)
+
+A real 82-row x 20-column quotation workbook, opened and saved with **no edits**:
+
+```
+file size in   20,700 bytes
+file size out  12,795 bytes   (-38%)
+column widths  unchanged  (A 1.29, B 0.86, C 4.29, D 5.71, E 5.14, F 7.43, G 4.57, H 10.43)
+merged ranges  unchanged  (20 in, 20 out)
+```
+
+Content survived and the container did not. Any acceptance test built on a checksum would have called
+this a corruption; the real defect is that a no-op save rewrote 38% of the file and nobody could say
+what was in it.
+
+Widths that exist are not widths that work: column A is 1.29 characters wide and column B is 0.86.
+The generator wrote values that no human can read, and the file is not corrupt in any way.
+
+Type confusion is visible inside the file: cells holding plain text carried the number format
+`[$-409]d/mmm/yy;@`, a date format, because the format was applied to a whole column rather than to a
+value type. Open it in a viewer that trusts formats more than content and the address line looks like
+a date.
+
+Same workbook name, two directories, two answers: 13,598 bytes versus 20,700 bytes.
+
 ## Fix
 
 - **Write the presentation explicitly.** Column widths, number formats, and cell types are set
