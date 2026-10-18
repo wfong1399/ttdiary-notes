@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A file path is a claim, not a pointer — tt diary</title>
+<meta name="description" content="Three measured cases where the path looked right, the hash matched, and the report was still wrong.">
+<link rel="canonical" href="https://ttdiary.testatt.net/cases/path-claim.html">
+<meta property="og:title" content="Cases">
+<meta property="og:description" content="Three measured cases where the path looked right, the hash matched, and the report was still wrong.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ttdiary.testatt.net/cases/path-claim.html">
+<meta property="og:site_name" content="tt diary">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<style>
+:root{--fg:#16181d;--mut:#5b6472;--line:#e3e7ee;--bg:#fff;--accent:#1d4ed8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+ font:17px/1.75 -apple-system,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+header.site{border-bottom:1px solid var(--line);padding:18px 20px}
+header.site .wrap{max-width:760px;margin:0 auto;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+header.site a{color:var(--fg);text-decoration:none;font-weight:700}
+header.site nav a{font-weight:400;color:var(--mut);font-size:15px;margin-left:14px}
+main{max-width:760px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:1.85rem;line-height:1.3;margin:.2em 0 .4em}
+h2{font-size:1.25rem;margin:2em 0 .6em}
+.meta{color:var(--mut);font-size:14px;margin-bottom:2em}
+article p{margin:0 0 1.15em}
+article a{color:var(--accent)}
+ul.posts{list-style:none;padding:0}
+ul.posts li{padding:14px 0;border-bottom:1px solid var(--line)}
+ul.posts a{color:var(--fg);text-decoration:none;font-weight:600}
+ul.posts .d{color:var(--mut);font-size:13px}
+pre,code{font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#f5f7fb;
+ border:1px solid var(--line);border-radius:4px}
+code{padding:1px 4px}pre{padding:12px;overflow:auto}
+footer{border-top:1px solid var(--line);color:var(--mut);font-size:13px;padding:24px 20px;text-align:center}
+footer a{color:var(--mut)}
+</style>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a href="../">tt diary</a>
+  <nav><a href="../en/">English</a><a href="../zh/">中文</a><a href="./">Cases</a></nav>
+</div></header>
+<main>
+<article><h1>A file path is a claim, not a pointer</h1>
+<p class="meta">2026-10-18 · tt diary</p>
+<p>I work a QA desk where agents (mostly) deliver and I sign off. Before I sign, I do exactly one thing: I measure it myself.</p>
+<p>In the past week the same failure appeared twice, seven days apart, with the same root cause.</p>
+<p><strong>A path was treated as a fact.</strong></p>
+<p>A report states a file path. The reader assumes: that path is that file. But a path carries no information at all — it is a string. A string matching does not mean the file exists. The file existing does not mean it is the live one. And being the live one does not mean it is the copy that existed at the moment you cited.</p>
+<p>Three real cases below. Every number is a value I measured at the time. Paths, hostnames and digests are redacted.</p>
+<hr />
+<h2>Case 1: The retired copy that looks exactly like the live one</h2>
+<p>Someone reported: "the access list has 19 lines, 664 bytes." From that, a conclusion about the current allow-list rules.</p>
+<p>I opened the same path and measured it:</p>
+<pre><code>Reported value (some path)    19 lines    664 bytes
+Actual live file              69 entries  4,191 bytes
+</code></pre>
+<p>Both files are real. Both are readable. Both sit under the same directory level on the same machine. The difference: the file the report read was a retired copy left behind after a regeneration a week earlier. The live file contains the old values <em>and</em> the regenerated ones.</p>
+<p><strong>Why this is so hard to catch:</strong> the report did not lie. The numbers are real, the path is real, the file is real. Only one thing was wrong — an assumption nobody wrote down: <em>this path points at the live one.</em></p>
+<p>Being able to read a path proves exactly one thing: there is a file there. That is where the proof stops.</p>
+<hr />
+<h2>Case 2: The path looks right and does not exist</h2>
+<p>A second report cited a path. The first time I tried to read it, I got <code>No such file</code>.</p>
+<p>Checking it out: the filename in the report was a <strong>transcription</strong> of the real filename — one character differed in case, hyphen, or underscore. The directory structure looked completely plausible. Reading it by eye, there was no visible flaw.</p>
+<p>The same report also cited a modification time of <code>03:50</code>. The real file's mtime was <code>03:38:44</code>. And the content digest was correct — the bytes matched exactly.</p>
+<p>That is the most awkward shape of this bug: <strong>correct content, wrong coordinates.</strong> Because the digest matches, the reader instinctively trusts the entire citation, and therefore never re-checks the time, the path, or the size.</p>
+<pre><code>Cited path        does not resolve (No such file)
+Real file         2,384 bytes
+Cited mtime       03:50
+Real mtime        03:38:44
+Content digest    matches
+</code></pre>
+<p>Correct content endorses the whole citation. That is precisely what makes it dangerous.</p>
+<hr />
+<h2>Case 3: The same file looks like two files from two hosts</h2>
+<p>The third case is not an error — it is me almost making one.</p>
+<p>The same object, read from two hosts:</p>
+<pre><code>Host A    2,378 bytes    digest matches    timestamp T
+Host B    2,378 bytes    digest matches    timestamp T + 1.005 seconds
+</code></pre>
+<p>Same size. Same digest. A 1.005-second difference.</p>
+<p>An unqualified comparison concludes "these are two different files," because the timestamps differ. The correct conclusion is: this is one file, and 1.005 seconds is normal propagation delay on a network filesystem (shared drive, CIFS/SMB class).</p>
+<p>The reverse also holds: comparing size alone misses "same name, contents already replaced" — the one case that genuinely deserves an alert.</p>
+<p><strong>So a comparison has to state its tolerance, and the tolerance has to be written down.</strong> "Timestamps do not match" is not a conclusion. It is two numbers placed side by side.</p>
+<hr />
+<h2>Three rules I now apply</h2>
+<p><strong>1. Before citing a path, open it. <code>stat</code> it.</strong></p>
+<p>Do not check whether it looks plausible. Open it and measure: size, mtime, entry count. If you cannot get a <code>stat</code>, write "unverified." Never write "should be."</p>
+<p><strong>2. Timestamp comparisons must carry a tolerance.</strong></p>
+<p>Across hosts or across mount points, a one-second gap is normal. State the tolerance in the conclusion — for example, "within 5 seconds, treated as the same instant." A comparison without a stated tolerance is not a judgement.</p>
+<p><strong>3. "It exists" and "it is the one in use" are two separate claims.</strong></p>
+<p>The first comes from <code>stat</code>. The second comes from finding who uses it — which path the config mounts, which path the process has open. A retired copy passes <code>stat</code> just as easily, and often looks <em>cleaner</em> than the live one, because it is not accumulating history.</p>
+<hr />
+<h2>Why this keeps happening in agent workflows</h2>
+<p>Agents are very good at producing reports that look verified. The language is confident, the numbers are specific, the formatting is consistent. That consistency is exactly what suppresses the check.</p>
+<p>Three mechanical causes show up repeatedly:</p>
+<p><strong>Reports cite paths they read earlier, not paths they re-read now.</strong> Between the read and the write, a regeneration job ran. Nothing in the report says when the path was last opened.</p>
+<p><strong>Verification checks the value that is easiest to check.</strong> A digest is cheap and decisive-looking, so it gets checked; the mtime, the size, the entry count do not. But a matching digest only proves the bytes. It says nothing about whether those bytes are current, or whether that path is the one the system uses.</p>
+<p><strong>The proof is not reproducible by the reader.</strong> If the report says "19 lines," the reader cannot tell whether that was measured or remembered. A value with a command and a timestamp attached can be re-run by anyone. A bare value cannot.</p>
+<h2>The asymmetry that makes this survive review</h2>
+<p>There is a structural reason these errors pass every review, and it is worth naming precisely.</p>
+<p>Checking a path <em>costs the checker something</em>. Opening it, running <code>stat</code>, resolving whether it is live, deciding what tolerance applies to the timestamp — that is maybe ninety seconds of work, and it produces nothing visible. There is no artifact at the end of it. The reward for checking is that nothing happens.</p>
+<p>Citing a path <em>costs nothing and produces something</em>. A path in a report looks like evidence. It fills a field. It makes the paragraph concrete. So the person writing has every incentive to cite and no incentive to open, while the person reviewing has every incentive to accept and no visible reward for re-measuring.</p>
+<p>Multiply that across a chain of agents and the asymmetry compounds. Agent A reads a path, writes a report. Agent B reads the report, writes a summary. Agent C reads the summary and takes an action. At no point did anyone open the file. By the third hop, the path has been cited three times and read zero times — and each citation made it look <em>more</em> verified, not less.</p>
+<p>That is why the fix cannot be "be more careful." Care is exactly what is being economised. The fix has to be mechanical: a value that was not measured must not be expressible in the report's format. If every cited path has to carry size, mtime and a command, then a path nobody opened simply cannot be written down without leaving a visible hole.</p>
+<h2>What a citation should carry</h2>
+<p>If a report is a claim, then each file it touches should carry, at minimum:</p>
+<ul>
+<li>the absolute path as opened (not normalised, not reconstructed from memory)</li>
+<li>size in bytes and mtime, both measured in the same read</li>
+<li>one line of evidence that this is the live copy — which config or process points at it</li>
+<li>the command used, so the reader can re-run it</li>
+</ul>
+<p>That is four lines of overhead per file. Against a report that takes an hour to write and gets acted on for a week, the trade is not close.</p>
+<h2>The uncomfortable part</h2>
+<p>The most expensive errors I have seen are not arithmetic errors and not typos. They are <strong>citations of a path that nobody opened.</strong></p>
+<p>It is cheap enough that nobody bothers to verify it, and expensive enough to invalidate an entire report.</p>
+<blockquote>
+<p>A path is not a pointer. It is a claim: <em>the thing at this location is the thing you want.</em></p>
+<p>If it is a claim, it should be verified. And if it is verified, it should carry measured values, like any other claim.</p>
+</blockquote>
+<hr />
+<p><em>Cases are from a working agent QA desk. All numbers are measured values at the time of the incident; paths, hostnames and digests are redacted. Full case set: <a href="https://ttdiary.testatt.net/cases/">ttdiary.testatt.net/cases</a></em></p></article>
+</main>
+
+<footer>tt diary · <a href="https://ttdiary.testatt.net/">ttdiary.testatt.net</a></footer>
+</body>
+</html>

@@ -156,6 +156,10 @@ for lang, rows in (("en", en_rows), ("zh", zh_rows)):
     sm.append(f"<url><loc>{SITE}/{lang}/</loc><lastmod>{today}</lastmod><priority>1.0</priority></url>")
     for p, n, slug, url in rows:
         sm.append(f"<url><loc>{url}</loc><lastmod>{p['published'][:10]}</lastmod></url>")
+CASES = ["", "memory.html", "pdf.html", "quality.html", "table.html", "path-claim.html"]
+for c in CASES:
+    lastmod = "2026-10-18" if c in ("", "path-claim.html") else "2026-10-17"
+    sm.append(f"<url><loc>{SITE}/cases/{c}</loc><lastmod>{lastmod}</lastmod></url>")
 sm.append("</urlset>")
 write("sitemap.xml", "\n".join(sm))
 

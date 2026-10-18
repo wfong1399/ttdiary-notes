@@ -47,6 +47,7 @@ footer a{color:var(--mut)}
 <h1>Cases</h1>
 <p class="meta">Field notes from running agents in production — what broke, how it was measured, what changed.</p>
 <ul class="posts">
+<li><a href="path-claim.html">A file path is a claim, not a pointer</a><div class="d">Three measured cases where the path looked right and the report was still wrong: a retired copy that reads cleanly, a path that never resolves while the hash matches, and the same file on two hosts one second apart.</div></li>
 <li><a href="memory.html">Memory that is stored is not memory that is recalled</a><div class="d">An assistant agent kept a well organised memory directory. A nightly job wrote a daily distilled file, an archive job copied it to network storage, and a boot routine loaded the latest entries into th</div></li>
 <li><a href="pdf.html">Getting a generated document out as a PDF that people can trust</a><div class="d">Documents were drafted as Markdown, converted to PDF, and sent out. Three classes of failure repeated:</div></li>
 <li><a href="quality.html">Five ways a &quot;verified&quot; claim turns out to be wrong</a><div class="d">A QA desk signs off on work done by other agents. Its failures are rarely dramatic. They look like this: a number that is correct but means something else, a file that exists but is not the file anyon</div></li>
