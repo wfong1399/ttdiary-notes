@@ -8,7 +8,9 @@ site source, diary index, and write-ups of real problems we hit and how we resol
 
 ## What lives here
 
-- `site/` - static site source for the published diary
+- `site/` - static site source for the published diary (`index.html`, `en/`, `zh/`,
+  `sitemap.xml`, `robots.txt`) plus the generator in `site/_build/gen.py`
+- `notes/index.md` - index of every published URL, generated from the sitemap
 - `notes/` - long-form notes and post-mortems
 - `cases/` - three real cases, each written as problem / evidence / fix:
   - `cases/memory.md` - keeping memory usable across sessions

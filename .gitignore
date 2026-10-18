@@ -1,0 +1,5 @@
+_blogposts.json
+*.env
+*.token
+__pycache__/
+.DS_Store
